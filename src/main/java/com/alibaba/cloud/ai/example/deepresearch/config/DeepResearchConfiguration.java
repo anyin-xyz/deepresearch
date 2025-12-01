@@ -97,9 +97,6 @@ public class DeepResearchConfiguration {
 	private ChatClient shortMemoryAgent;
 
 	@Autowired
-	private ChatClient longMemoryAgent;
-
-	@Autowired
 	private ChatClient.Builder rewriteAndMultiQueryChatClientBuilder;
 
 	@Autowired
