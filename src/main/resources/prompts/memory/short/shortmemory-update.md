@@ -20,7 +20,7 @@ If there are significant differences between the current extracted memory and pr
 # Note
 The History Extract Track records the user role extraction memory after each user question. 
 It is only needed when the current extraction memory is significantly different from the previous extraction memory.
-
+The significant difference is based on the fact that the user overviews of `Current Extract Memory` and `Previous Extract Memory` clearly describe different topics.
 # Decision Guidelines
 You need to compare the current extraction memory with the previous extraction memory.
 - UPDATE: Merge the features of both memories and increase the confidence level appropriately

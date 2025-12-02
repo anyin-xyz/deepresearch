@@ -76,7 +76,7 @@ public class ShortUserRoleExtractInMemory implements ShortTermMemoryRepository {
 		List<UserMessage> userMessages = userQueryMemory.get(conversationId);
 		if (!CollectionUtils.isEmpty(userMessages)) {
 			userMessages.addAll(messages);
-			userQueryMemory.put(conversationId, messages);
+			userQueryMemory.put(conversationId, userMessages);
 		}
 		else {
 			userQueryMemory.put(conversationId, messages);

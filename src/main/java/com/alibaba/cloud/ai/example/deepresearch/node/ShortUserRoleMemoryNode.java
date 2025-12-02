@@ -105,11 +105,7 @@ public class ShortUserRoleMemoryNode implements NodeAction {
 		List<String> recentUserQueries = shortTermMemoryRepository.getRecentUserQueries(StateUtil.getSessionId(state),
 				shortTermMemoryProperties.getUserRoleMemory().getHistoryUserMessagesNum());
 		if (CollectionUtils.isEmpty(recentUserQueries)) {
-			Map<String, Object> metaData = new HashMap<>();
-			metaData.put("create_time", LocalDateTime.now(ZoneId.of(ZONE_ASIA_SHANGHAI)));
-			UserMessage userMessage = UserMessage.builder().text(StateUtil.getQuery(state)).metadata(metaData).build();
-			shortTermMemoryRepository.saveUserQuery(StateUtil.getSessionId(state),
-					new ArrayList<>(Collections.singletonList(userMessage)));
+			saveUserQuery(state);
 			return "";
 		}
 		StringBuilder historyUserMessages = new StringBuilder();
@@ -117,8 +113,21 @@ public class ShortUserRoleMemoryNode implements NodeAction {
 			String userMessage = String.format("第%s轮, 用户消息:%s\n", i + 1, recentUserQueries.get(i));
 			historyUserMessages.append(userMessage);
 		}
+        saveUserQuery(state);
 		return historyUserMessages.toString();
 	}
+
+    /**
+     * 保存用户提问到短期记忆库
+     * @param state state
+     */
+    private void saveUserQuery(OverAllState state) {
+        Map<String, Object> metaData = new HashMap<>();
+        metaData.put("create_time", LocalDateTime.now(ZoneId.of(ZONE_ASIA_SHANGHAI)));
+        UserMessage userMessage = UserMessage.builder().text(StateUtil.getQuery(state)).metadata(metaData).build();
+        shortTermMemoryRepository.saveUserQuery(StateUtil.getSessionId(state),
+                new ArrayList<>(Collections.singletonList(userMessage)));
+    }
 
 	/**
 	 * 提取用户角色短期记忆
@@ -184,9 +193,17 @@ public class ShortUserRoleMemoryNode implements NodeAction {
 		Double latestConfidence = Objects.requireNonNull(latestExtract).getConversationAnalysis().getConfidenceScore();
 		Double currentConfidence = currentResult.getConversationAnalysis().getConfidenceScore();
 		// 如果当前结果的置信度>=，融合历史用户角色信息后更新短期记忆，是否真正融合需要由LLM结合历史判定
+        // 如当前轮用户进行角色扮演，但结合历史看，这不是用户的核心角色信息
 		if (currentConfidence >= latestConfidence) {
 			return mergeAndUpdateShortTermMemory(state, currentResult, latestExtract);
 		}
+        // 否则，保持历史短期记忆不变，仅更新交互次数和更新时间
+        latestExtract.getConversationAnalysis().setInteractionCount(latestExtract.getConversationAnalysis().getInteractionCount() + 1);
+        latestExtract.setUpdateTime(LocalDateTime.now(ZoneId.of(ZONE_ASIA_SHANGHAI)).format(DATE_TIME_FORMATTER));
+        SystemMessage newShortMemory = new SystemMessage(JsonUtil.toJson(latestExtract));
+        shortTermMemoryRepository.saveOrUpdate(USER_ID, StateUtil.getSessionId(state),
+                new ArrayList<>(Collections.singleton(newShortMemory)));
+        // 返回当前语句的提取结果，指令跟随用户最新的输入
 		return currentResult;
 	}
 
